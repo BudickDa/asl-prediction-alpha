@@ -1,0 +1,22 @@
+trainingInput:
+  hyperparameters:
+    goal: MINIMIZE
+    maxTrials: 25
+    maxParallelTrials: 1
+    hyperparameterMetricTag: loss
+    params:
+    - parameterName: train_batch_size
+      type: INTEGER
+      minValue: 8
+      maxValue: 256
+      scaleType: UNIT_LOG_SCALE
+    - parameterName: train_steps
+      type: INTEGER
+      minValue: 10000
+      maxValue: 1000000
+      scaleType: UNIT_LOG_SCALE
+    - parameterName: learning_rate
+      type: DOUBLE
+      minValue: 0.001
+      maxValue: 0.1
+      scaleType: UNIT_LOG_SCALE

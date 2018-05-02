@@ -84,30 +84,23 @@ def create_custom_estimator(output_dir, hparams):
 
 
 def generate_experiment_fn(output_dir, hparams):
-    def experiment_fn(output_dir):
-        get_train = model.read_dataset(hparams['train_data_paths'],
-                                       tf.estimator.ModeKeys.TRAIN,
-                                       hparams['train_batch_size'])
-        get_valid = model.read_dataset(hparams['eval_data_paths'],
-                                       tf.estimator.ModeKeys.EVAL,
-                                       1000)
-        eval_freq = max(1, min(2000, hparams['train_steps'] / 5))
+    get_train = model.read_dataset(hparams['train_data_paths'],
+                                   tf.estimator.ModeKeys.TRAIN,
+                                   hparams['train_batch_size'])
+    get_valid = model.read_dataset(hparams['eval_data_paths'],
+                                   tf.estimator.ModeKeys.EVAL,
+                                   1000)
 
-        return tf.contrib.learn.Experiment(
-            estimator=create_custom_estimator(output_dir, hparams),
-            train_input_fn=get_train,
-            eval_input_fn=get_valid,
-            train_steps=hparams['train_steps'],
-            eval_steps=1,
-            min_eval_frequency=eval_freq,
-            export_strategies=[saved_model_export_utils.make_export_strategy(
-                model.serving_input_fn,
-                default_output_alternative_key=None,
-                exports_to_keep=1
-            )]
-        )
+    estimator = create_custom_estimator(output_dir, hparams)
 
-    return experiment_fn
+    train_spec = tf.estimator.TrainSpec(input_fn=get_train, max_steps=hparams['train_steps'])
+    exporter = tf.estimator.LatestExporter('exporter', model.serving_input_fn)
+    eval_spec = tf.estimator.EvalSpec(input_fn=get_valid,
+                                      steps=1000,
+                                      start_delay_secs=1,  # start evaluating after N seconds
+                                      throttle_secs=10,  # evaluate every N seconds
+                                      exporters=exporter)
+    return tf.estimator.train_and_evaluate(estimator=estimator, train_spec=train_spec, eval_spec=eval_spec)
 
 
 if __name__ == '__main__':
@@ -212,7 +205,6 @@ if __name__ == '__main__':
 
     # Run the training job
     try:
-        learn_runner.run(generate_experiment_fn(output_dir, hparams), output_dir)
+        generate_experiment_fn(output_dir, hparams)
     except:
         traceback.print_exc()
-
